@@ -149,6 +149,18 @@ button:active {
   box-shadow: 0 10px 40px rgba(0,0,0,0.5);
 }
 
+.hint-arrow {
+  position: absolute;
+  pointer-events: none;
+  animation: pulse 1s ease-in-out infinite;
+  z-index: 100;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
 @keyframes popIn {
   0% { transform: translate(-50%, -50%) scale(0); }
   70% { transform: translate(-50%, -50%) scale(1.1); }
@@ -198,6 +210,7 @@ button:active {
 <div id="controls">
   <button id="restart">🔄 重新开始</button>
   <button id="undo">↩️ 撤销</button>
+  <button id="hint">💡 提示</button>
 </div>
 
 <div id="mobile-controls">
@@ -375,6 +388,197 @@ function undo() {
   
   updateStats();
   render();
+  removeHintArrow();
+}
+
+// BFS求解算法
+function solveLevel() {
+  const directions = [
+    { dx: 0, dy: -1, name: 'up' },
+    { dx: 0, dy: 1, name: 'down' },
+    { dx: -1, dy: 0, name: 'left' },
+    { dx: 1, dy: 0, name: 'right' }
+  ];
+  
+  // 序列化地图状态
+  function serialize(map) {
+    return map.map(row => row.join('')).join('|');
+  }
+  
+  // 复制地图
+  function copyMap(map) {
+    return map.map(row => [...row]);
+  }
+  
+  // 检查是否胜利
+  function isWin(map) {
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[y].length; x++) {
+        if (map[y][x] === BOX) return false;
+      }
+    }
+    return true;
+  }
+  
+  // 移动箱子
+  function tryMove(map, playerX, playerY, dx, dy) {
+    const newX = playerX + dx;
+    const newY = playerY + dy;
+    
+    if (newY < 0 || newY >= map.length || newX < 0 || newX >= map[0].length) return null;
+    
+    const targetTile = map[newY][newX];
+    if (targetTile === WALL) return null;
+    
+    // 空地或目标点
+    if (targetTile === EMPTY || targetTile === TARGET) {
+      const newMap = copyMap(map);
+      const oldTile = newMap[playerY][playerX];
+      newMap[playerY][playerX] = (oldTile === PLAYER_ON_TARGET) ? TARGET : EMPTY;
+      const newTile = newMap[newY][newX];
+      newMap[newY][newX] = (newTile === TARGET) ? PLAYER_ON_TARGET : PLAYER;
+      return { map: newMap, playerX: newX, playerY: newY };
+    }
+    
+    // 箱子
+    if (targetTile === BOX || targetTile === BOX_ON_TARGET) {
+      const boxNewX = newX + dx;
+      const boxNewY = newY + dy;
+      
+      if (boxNewY < 0 || boxNewY >= map.length || boxNewX < 0 || boxNewX >= map[0].length) return null;
+      
+      const boxTargetTile = map[boxNewY][boxNewX];
+      if (boxTargetTile === WALL || boxTargetTile === BOX || boxTargetTile === BOX_ON_TARGET) return null;
+      
+      const newMap = copyMap(map);
+      
+      // 移动箱子
+      newMap[boxNewY][boxNewX] = (boxTargetTile === TARGET) ? BOX_ON_TARGET : BOX;
+      newMap[newY][newX] = (targetTile === BOX_ON_TARGET) ? TARGET : EMPTY;
+      
+      // 移动玩家
+      const oldTile = newMap[playerY][playerX];
+      newMap[playerY][playerX] = (oldTile === PLAYER_ON_TARGET) ? TARGET : EMPTY;
+      const newTile = newMap[newY][newX];
+      newMap[newY][newX] = (newTile === TARGET) ? PLAYER_ON_TARGET : PLAYER;
+      
+      return { map: newMap, playerX: newX, playerY: newY };
+    }
+    
+    return null;
+  }
+  
+  // BFS
+  const visited = new Set();
+  const queue = [{
+    map: copyMap(gameMap),
+    playerX: playerPos.x,
+    playerY: playerPos.y,
+    moves: []
+  }];
+  
+  visited.add(serialize(gameMap));
+  
+  let iterations = 0;
+  const maxIterations = 50000;
+  
+  while (queue.length > 0 && iterations < maxIterations) {
+    iterations++;
+    const current = queue.shift();
+    
+    if (isWin(current.map)) {
+      return current.moves;
+    }
+    
+    for (const dir of directions) {
+      const result = tryMove(current.map, current.playerX, current.playerY, dir.dx, dir.dy);
+      
+      if (result) {
+        const key = serialize(result.map);
+        if (!visited.has(key)) {
+          visited.add(key);
+          queue.push({
+            map: result.map,
+            playerX: result.playerX,
+            playerY: result.playerY,
+            moves: [...current.moves, dir.name]
+          });
+        }
+      }
+    }
+  }
+  
+  return null; // 无解
+}
+
+// 显示提示
+let hintArrow = null;
+
+function showHint() {
+  const solution = solveLevel();
+  
+  if (!solution || solution.length === 0) {
+    toast('已经是最佳状态或无解！');
+    return;
+  }
+  
+  removeHintArrow();
+  
+  const nextMove = solution[0];
+  let dx = 0, dy = 0;
+  
+  switch(nextMove) {
+    case 'up': dy = -1; break;
+    case 'down': dy = 1; break;
+    case 'left': dx = -1; break;
+    case 'right': dx = 1; break;
+  }
+  
+  const offsetX = (canvas.width - gameMap[0].length * TILE_SIZE) / 2;
+  const offsetY = (canvas.height - gameMap.length * TILE_SIZE) / 2;
+  
+  const fromX = offsetX + playerPos.x * TILE_SIZE + TILE_SIZE / 2;
+  const fromY = offsetY + playerPos.y * TILE_SIZE + TILE_SIZE / 2;
+  const toX = fromX + dx * TILE_SIZE;
+  const toY = fromY + dy * TILE_SIZE;
+  
+  // 绘制箭头
+  ctx.save();
+  ctx.strokeStyle = '#f39c12';
+  ctx.fillStyle = '#f39c12';
+  ctx.lineWidth = 4;
+  
+  // 箭头主体
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+  
+  // 箭头头部
+  const angle = Math.atan2(toY - fromY, toX - fromX);
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(toX - 15 * Math.cos(angle - Math.PI / 6), toY - 15 * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(toX - 15 * Math.cos(angle + Math.PI / 6), toY - 15 * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.restore();
+  
+  // 3秒后移除提示
+  hintArrow = setTimeout(() => {
+    render();
+    hintArrow = null;
+  }, 3000);
+  
+  toast(`建议向 ${nextMove === 'up' ? '上' : nextMove === 'down' ? '下' : nextMove === 'left' ? '左' : '右'} 移动`);
+}
+
+function removeHintArrow() {
+  if (hintArrow) {
+    clearTimeout(hintArrow);
+    hintArrow = null;
+  }
 }
 
 // 移动
@@ -471,6 +675,35 @@ function showWinMessage() {
   msg.className = 'win-message';
   msg.innerHTML = `🎉 恭喜过关！<br><span style="font-size: 1rem">步数: ${moves} | 推箱: ${pushes}</span>`;
   container.appendChild(msg);
+}
+
+// Toast提示
+function toast(message, duration = 2000) {
+  const existing = document.querySelector('.toast-message');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = 'toast-message';
+  toast.style.cssText = `
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(52, 152, 219, 0.95);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    z-index: 1000;
+    animation: fadeIn 0.3s;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 }
 
 // 更新统计
@@ -605,6 +838,7 @@ document.addEventListener('keydown', (e) => {
 // 按钮控制
 document.getElementById('restart').onclick = () => loadLevel(currentLevel);
 document.getElementById('undo').onclick = undo;
+document.getElementById('hint').onclick = showHint;
 
 // 移动端控制
 document.querySelector('#mobile-controls .up').onclick = () => move(0, -1);
