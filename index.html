@@ -161,6 +161,69 @@ button:active {
   50% { opacity: 1; transform: scale(1.2); }
 }
 
+.solution-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s;
+}
+
+.solution-content {
+  background: #1a1a2e;
+  border: 2px solid #3498db;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: #e0e0e0;
+  animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.solution-content h2 {
+  color: #f39c12;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.solution-steps {
+  font-family: monospace;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.solution-step {
+  padding: 8px 12px;
+  margin: 5px 0;
+  background: rgba(52, 152, 219, 0.1);
+  border-left: 3px solid #3498db;
+  border-radius: 3px;
+}
+
+.solution-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.solution-buttons button {
+  padding: 10px 20px;
+}
+
 @keyframes popIn {
   0% { transform: translate(-50%, -50%) scale(0); }
   70% { transform: translate(-50%, -50%) scale(1.1); }
@@ -211,6 +274,7 @@ button:active {
   <button id="restart">🔄 重新开始</button>
   <button id="undo">↩️ 撤销</button>
   <button id="hint">💡 提示</button>
+  <button id="show-solution">📜 显示解法</button>
 </div>
 
 <div id="mobile-controls">
@@ -577,6 +641,95 @@ function removeHintArrow() {
   }
 }
 
+// 显示完整解法
+function showSolution() {
+  const solution = solveLevel();
+  
+  if (!solution || solution.length === 0) {
+    toast('已经是最佳状态或无解！');
+    return;
+  }
+  
+  // 创建模态窗口
+  const modal = document.createElement('div');
+  modal.className = 'solution-modal';
+  modal.id = 'solution-modal';
+  
+  const content = document.createElement('div');
+  content.className = 'solution-content';
+  
+  // 标题
+  const title = document.createElement('h2');
+  title.textContent = `📜 完整解法 (${solution.length} 步)`;
+  content.appendChild(title);
+  
+  // 步骤列表
+  const stepsDiv = document.createElement('div');
+  stepsDiv.className = 'solution-steps';
+  
+  const directionNames = {
+    'up': '⬆️ 上',
+    'down': '⬇️ 下',
+    'left': '⬅️ 左',
+    'right': '➡️ 右'
+  };
+  
+  solution.forEach((step, index) => {
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'solution-step';
+    stepDiv.textContent = `第 ${index + 1} 步: ${directionNames[step] || step}`;
+    stepsDiv.appendChild(stepDiv);
+  });
+  
+  content.appendChild(stepsDiv);
+  
+  // 按钮区域
+  const buttonsDiv = document.createElement('div');
+  buttonsDiv.className = 'solution-buttons';
+  
+  // 复制解法按钮
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = '📋 复制解法';
+  copyBtn.onclick = () => {
+    const solutionText = solution.map((step, i) => 
+      `${i + 1}. ${directionNames[step]}`
+    ).join('\n');
+    navigator.clipboard.writeText(solutionText).then(() => {
+      toast('解法已复制到剪贴板！');
+    });
+  };
+  buttonsDiv.appendChild(copyBtn);
+  
+  // 关闭按钮
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✖️ 关闭';
+  closeBtn.onclick = () => {
+    modal.remove();
+  };
+  buttonsDiv.appendChild(closeBtn);
+  
+  content.appendChild(buttonsDiv);
+  modal.appendChild(content);
+  
+  // 点击背景关闭
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  };
+  
+  document.body.appendChild(modal);
+  
+  // ESC键关闭
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('solution-modal');
+      if (modal) modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  });
+}
+
 // 移动
 function move(dx, dy) {
   const newX = playerPos.x + dx;
@@ -835,6 +988,7 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('restart').onclick = () => loadLevel(currentLevel);
 document.getElementById('undo').onclick = undo;
 document.getElementById('hint').onclick = showHint;
+document.getElementById('show-solution').onclick = showSolution;
 
 // 移动端控制
 document.querySelector('#mobile-controls .up').onclick = () => move(0, -1);
