@@ -813,15 +813,20 @@ class FirebaseUserSystem {
     }
   }
 
-  showUserInfo() {
+  async showUserInfo() {
     document.getElementById('login-btn').style.display = 'none';
+    document.getElementById('loading-indicator').style.display = 'none';
     const userInfo = document.getElementById('user-info');
     userInfo.style.display = 'flex';
+    userInfo.style.alignItems = 'center';
     
     const displayName = this.userProfile?.displayName || this.currentUser.email.split('@')[0];
     document.getElementById('user-avatar').textContent = displayName[0].toUpperCase();
     document.getElementById('user-name').textContent = displayName;
     document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
+    
+    // Force re-layout
+    userInfo.offsetHeight;
   }
 
   hideUserInfo() {
