@@ -33,7 +33,25 @@ h1 {
   text-align: center;
 }
 
-/* 用户区域 */
+/* Loading indicator */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+}
+
+.loading::after {
+  content: '...';
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* User section */
 #user-section {
   position: fixed;
   top: 20px;
@@ -117,7 +135,7 @@ h1 {
   transform: translateY(-2px);
 }
 
-/* 认证模态框 */
+/* Auth modal */
 .auth-modal {
   position: fixed;
   top: 0;
@@ -244,8 +262,45 @@ h1 {
   transform: translateY(-2px);
 }
 
+.auth-submit:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #db4437;
+  border-radius: 5px;
+  background: transparent;
+  color: #db4437;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.google-btn:hover {
+  background: #db4437;
+  color: white;
+}
+
 .auth-error {
   color: #e74c3c;
+  font-size: 0.9rem;
+  margin-top: 15px;
+  text-align: center;
+  display: none;
+}
+
+.auth-success {
+  color: #2ecc71;
   font-size: 0.9rem;
   margin-top: 15px;
   text-align: center;
@@ -391,9 +446,15 @@ footer a:hover {
 </style>
 </head>
 <body>
-<!-- 用户区域 -->
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- User section -->
 <div id="user-section">
-  <button id="login-btn">👤 登录 / 注册</button>
+  <div id="loading-indicator" class="loading">初始化 Firebase</div>
+  <button id="login-btn" style="display:none;">👤 登录 / 注册</button>
   <div id="user-info">
     <div id="user-avatar"></div>
     <div id="user-details">
@@ -458,10 +519,10 @@ footer a:hover {
 </div>
 
 <footer>
-  <p>Made with ❤️ by <a href="https://github.com/jz">Jeff Zhong</a> | Powered by OpenClaw</p>
+  <p>Made with ❤️ by <a href="https://github.com/jz">Jeff Zhong</a> | Powered by OpenClaw & Firebase</p>
 </footer>
 
-<!-- 认证模态框 -->
+<!-- Auth modal -->
 <div class="auth-modal" id="auth-modal">
   <div class="auth-content">
     <button class="auth-close" id="auth-close">&times;</button>
@@ -472,26 +533,29 @@ footer a:hover {
       <button class="auth-tab" data-tab="register">注册</button>
     </div>
 
-    <!-- 登录表单 -->
+    <!-- Login form -->
     <form class="auth-form active" id="login-form">
       <div class="form-group">
-        <label for="login-username">用户名</label>
-        <input type="text" id="login-username" placeholder="请输入用户名" required>
+        <label for="login-email">邮箱地址</label>
+        <input type="email" id="login-email" placeholder="your@email.com" required>
       </div>
       <div class="form-group">
         <label for="login-password">密码</label>
         <input type="password" id="login-password" placeholder="请输入密码" required>
       </div>
       <button type="submit" class="auth-submit">登录</button>
+      <button type="button" class="google-btn" id="google-login">
+        <span>🔑</span> 使用 Google 登录
+      </button>
       <div class="auth-error" id="login-error"></div>
+      <div class="auth-success" id="login-success"></div>
     </form>
 
-    <!-- 注册表单 -->
+    <!-- Register form -->
     <form class="auth-form" id="register-form">
       <div class="form-group">
-        <label for="register-username">用户名</label>
-        <input type="text" id="register-username" placeholder="3-20个字符" required minlength="3" maxlength="20">
-        <small>用户名用于显示和登录</small>
+        <label for="register-email">邮箱地址</label>
+        <input type="email" id="register-email" placeholder="your@email.com" required>
       </div>
       <div class="form-group">
         <label for="register-password">密码</label>
@@ -502,53 +566,87 @@ footer a:hover {
         <input type="password" id="register-confirm" placeholder="再次输入密码" required>
       </div>
       <button type="submit" class="auth-submit">注册</button>
+      <button type="button" class="google-btn" id="google-register">
+        <span>🔑</span> 使用 Google 注册
+      </button>
       <div class="auth-error" id="register-error"></div>
+      <div class="auth-success" id="register-success"></div>
     </form>
   </div>
 </div>
 
 <script>
-// 用户系统
-class UserSystem {
+// ========================================
+// TODO: 替换为你的 Firebase 配置
+// ========================================
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+// ========================================
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// User System Class
+class FirebaseUserSystem {
   constructor() {
     this.currentUser = null;
+    this.userProfile = null;
     this.init();
   }
 
-  init() {
-    // 检查是否有已登录用户
-    const savedUser = localStorage.getItem('gameUser');
-    if (savedUser) {
-      this.currentUser = JSON.parse(savedUser);
-      this.showUserInfo();
-    }
+  async init() {
+    // Listen for auth state changes
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        this.currentUser = user;
+        await this.loadUserProfile();
+        this.showUserInfo();
+      } else {
+        this.currentUser = null;
+        this.userProfile = null;
+        this.hideUserInfo();
+      }
+      
+      // Hide loading indicator
+      document.getElementById('loading-indicator').style.display = 'none';
+      document.getElementById('login-btn').style.display = 'block';
+    });
+
     this.setupEventListeners();
   }
 
   setupEventListeners() {
-    // 登录按钮
+    // Login button
     document.getElementById('login-btn').addEventListener('click', () => {
       this.showAuthModal();
     });
 
-    // 退出按钮
+    // Logout button
     document.getElementById('logout-btn').addEventListener('click', () => {
       this.logout();
     });
 
-    // 关闭模态框
+    // Close modal
     document.getElementById('auth-close').addEventListener('click', () => {
       this.hideAuthModal();
     });
 
-    // 点击背景关闭
+    // Click background to close
     document.getElementById('auth-modal').addEventListener('click', (e) => {
       if (e.target.id === 'auth-modal') {
         this.hideAuthModal();
       }
     });
 
-    // 标签切换
+    // Tab switching
     document.querySelectorAll('.auth-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         const targetTab = tab.dataset.tab;
@@ -556,22 +654,31 @@ class UserSystem {
       });
     });
 
-    // 登录表单
+    // Login form
     document.getElementById('login-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      this.login();
+      this.loginWithEmail();
     });
 
-    // 注册表单
+    // Register form
     document.getElementById('register-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      this.register();
+      this.registerWithEmail();
+    });
+
+    // Google login buttons
+    document.getElementById('google-login').addEventListener('click', () => {
+      this.loginWithGoogle();
+    });
+
+    document.getElementById('google-register').addEventListener('click', () => {
+      this.loginWithGoogle();
     });
   }
 
   showAuthModal() {
     document.getElementById('auth-modal').classList.add('show');
-    document.getElementById('login-username').focus();
+    document.getElementById('login-email').focus();
   }
 
   hideAuthModal() {
@@ -589,50 +696,32 @@ class UserSystem {
     });
   }
 
-  login() {
-    const username = document.getElementById('login-username').value.trim();
+  async loginWithEmail() {
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
-    if (!username || !password) {
+    if (!email || !password) {
       this.showError('login-error', '请填写所有字段');
       return;
     }
 
-    // 获取用户列表
-    const users = this.getUsers();
-    const user = users.find(u => u.username === username);
-
-    if (!user) {
-      this.showError('login-error', '用户不存在');
-      return;
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      this.hideAuthModal();
+      this.showNotification('登录成功！');
+    } catch (error) {
+      console.error('Login error:', error);
+      this.showError('login-error', this.getErrorMessage(error.code));
     }
-
-    // 简单密码验证（实际应该加密，但这是本地演示）
-    if (user.password !== this.simpleHash(password)) {
-      this.showError('login-error', '密码错误');
-      return;
-    }
-
-    // 登录成功
-    this.currentUser = user;
-    localStorage.setItem('gameUser', JSON.stringify(user));
-    this.hideAuthModal();
-    this.showUserInfo();
-    this.showNotification('登录成功！欢迎回来，' + username);
   }
 
-  register() {
-    const username = document.getElementById('register-username').value.trim();
+  async registerWithEmail() {
+    const email = document.getElementById('register-email').value.trim();
     const password = document.getElementById('register-password').value;
     const confirm = document.getElementById('register-confirm').value;
 
-    if (!username || !password || !confirm) {
+    if (!email || !password || !confirm) {
       this.showError('register-error', '请填写所有字段');
-      return;
-    }
-
-    if (username.length < 3 || username.length > 20) {
-      this.showError('register-error', '用户名需要3-20个字符');
       return;
     }
 
@@ -646,49 +735,92 @@ class UserSystem {
       return;
     }
 
-    // 检查用户名是否已存在
-    const users = this.getUsers();
-    if (users.find(u => u.username === username)) {
-      this.showError('register-error', '用户名已存在');
-      return;
+    try {
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      
+      // Create user profile in Firestore
+      await this.createUserProfile(userCredential.user, {
+        email: email,
+        displayName: email.split('@')[0],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        scores: {
+          snake: 0,
+          sokoban: {}
+        }
+      });
+
+      this.hideAuthModal();
+      this.showNotification('注册成功！欢迎加入！');
+    } catch (error) {
+      console.error('Register error:', error);
+      this.showError('register-error', this.getErrorMessage(error.code));
     }
-
-    // 创建新用户
-    const newUser = {
-      id: Date.now(),
-      username: username,
-      password: this.simpleHash(password),
-      createdAt: new Date().toISOString(),
-      scores: {
-        snake: 0,
-        sokoban: {}
-      }
-    };
-
-    users.push(newUser);
-    this.saveUsers(users);
-
-    // 自动登录
-    this.currentUser = newUser;
-    localStorage.setItem('gameUser', JSON.stringify(newUser));
-    this.hideAuthModal();
-    this.showUserInfo();
-    this.showNotification('注册成功！欢迎，' + username);
   }
 
-  logout() {
-    this.currentUser = null;
-    localStorage.removeItem('gameUser');
-    this.hideUserInfo();
-    this.showNotification('已退出登录');
+  async loginWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    
+    try {
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+      
+      // Check if user profile exists
+      const profileDoc = await db.collection('users').doc(user.uid).get();
+      
+      if (!profileDoc.exists) {
+        // Create new profile
+        await this.createUserProfile(user, {
+          email: user.email,
+          displayName: user.displayName || user.email.split('@')[0],
+          photoURL: user.photoURL,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          scores: {
+            snake: 0,
+            sokoban: {}
+          }
+        });
+      }
+
+      this.hideAuthModal();
+      this.showNotification('登录成功！');
+    } catch (error) {
+      console.error('Google login error:', error);
+      this.showError('login-error', this.getErrorMessage(error.code));
+    }
+  }
+
+  async createUserProfile(user, profileData) {
+    await db.collection('users').doc(user.uid).set(profileData);
+  }
+
+  async loadUserProfile() {
+    try {
+      const doc = await db.collection('users').doc(this.currentUser.uid).get();
+      if (doc.exists) {
+        this.userProfile = doc.data();
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  }
+
+  async logout() {
+    try {
+      await auth.signOut();
+      this.showNotification('已退出登录');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   }
 
   showUserInfo() {
     document.getElementById('login-btn').style.display = 'none';
     const userInfo = document.getElementById('user-info');
     userInfo.style.display = 'flex';
-    document.getElementById('user-avatar').textContent = this.currentUser.username[0].toUpperCase();
-    document.getElementById('user-name').textContent = this.currentUser.username;
+    
+    const displayName = this.userProfile?.displayName || this.currentUser.email.split('@')[0];
+    document.getElementById('user-avatar').textContent = displayName[0].toUpperCase();
+    document.getElementById('user-name').textContent = displayName;
     document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
   }
 
@@ -697,12 +829,44 @@ class UserSystem {
     document.getElementById('user-info').style.display = 'none';
   }
 
+  getTotalScore() {
+    if (!this.userProfile || !this.userProfile.scores) return 0;
+    return this.userProfile.scores.snake || 0;
+  }
+
+  async updateScore(game, score) {
+    if (!this.currentUser || !this.userProfile) return;
+
+    if (game === 'snake') {
+      if (score > (this.userProfile.scores.snake || 0)) {
+        try {
+          await db.collection('users').doc(this.currentUser.uid).update({
+            'scores.snake': score
+          });
+          this.userProfile.scores.snake = score;
+          document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
+        } catch (error) {
+          console.error('Error updating score:', error);
+        }
+      }
+    }
+  }
+
   showError(elementId, message) {
     const errorEl = document.getElementById(elementId);
     errorEl.textContent = message;
     errorEl.style.display = 'block';
     setTimeout(() => {
       errorEl.style.display = 'none';
+    }, 5000);
+  }
+
+  showSuccess(elementId, message) {
+    const successEl = document.getElementById(elementId);
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+    setTimeout(() => {
+      successEl.style.display = 'none';
     }, 3000);
   }
 
@@ -711,58 +875,28 @@ class UserSystem {
     document.getElementById('register-form').reset();
     document.getElementById('login-error').style.display = 'none';
     document.getElementById('register-error').style.display = 'none';
+    document.getElementById('login-success').style.display = 'none';
+    document.getElementById('register-success').style.display = 'none';
   }
 
-  getUsers() {
-    const users = localStorage.getItem('gameUsers');
-    return users ? JSON.parse(users) : [];
-  }
-
-  saveUsers(users) {
-    localStorage.setItem('gameUsers', JSON.stringify(users));
-  }
-
-  simpleHash(str) {
-    // 简单哈希（仅用于演示，实际应用应使用更安全的方法）
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash.toString();
-  }
-
-  getTotalScore() {
-    if (!this.currentUser) return 0;
-    const snakeScore = this.currentUser.scores.snake || 0;
-    return snakeScore;
-  }
-
-  updateScore(game, score) {
-    if (!this.currentUser) return;
-
-    if (game === 'snake') {
-      if (score > this.currentUser.scores.snake) {
-        this.currentUser.scores.snake = score;
-        this.saveUser();
-        document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
-      }
-    }
-  }
-
-  saveUser() {
-    const users = this.getUsers();
-    const index = users.findIndex(u => u.id === this.currentUser.id);
-    if (index !== -1) {
-      users[index] = this.currentUser;
-      this.saveUsers(users);
-      localStorage.setItem('gameUser', JSON.stringify(this.currentUser));
-    }
+  getErrorMessage(errorCode) {
+    const messages = {
+      'auth/email-already-in-use': '该邮箱已被注册',
+      'auth/invalid-email': '邮箱地址格式不正确',
+      'auth/operation-not-allowed': '操作不被允许',
+      'auth/weak-password': '密码太弱，请使用更强的密码',
+      'auth/user-disabled': '该账户已被禁用',
+      'auth/user-not-found': '用户不存在',
+      'auth/wrong-password': '密码错误',
+      'auth/invalid-credential': '邮箱或密码错误',
+      'auth/too-many-requests': '尝试次数过多，请稍后再试',
+      'auth/popup-closed-by-user': '登录窗口被关闭',
+      'auth/cancelled-popup-request': '操作被取消'
+    };
+    return messages[errorCode] || '发生错误，请重试';
   }
 
   showNotification(message) {
-    // 创建通知
     const notification = document.createElement('div');
     notification.style.cssText = `
       position: fixed;
@@ -780,7 +914,6 @@ class UserSystem {
     notification.textContent = message;
     document.body.appendChild(notification);
 
-    // 添加动画
     const style = document.createElement('style');
     style.textContent = `
       @keyframes slideInRight {
@@ -790,7 +923,6 @@ class UserSystem {
     `;
     document.head.appendChild(style);
 
-    // 3秒后移除
     setTimeout(() => {
       notification.style.animation = 'slideInRight 0.3s reverse';
       setTimeout(() => notification.remove(), 300);
@@ -804,12 +936,16 @@ class UserSystem {
   getCurrentUser() {
     return this.currentUser;
   }
+
+  getUserProfile() {
+    return this.userProfile;
+  }
 }
 
-// 初始化用户系统
-const userSystem = new UserSystem();
+// Initialize user system
+const userSystem = new FirebaseUserSystem();
 
-// 导出给其他页面使用
+// Export for other pages
 window.userSystem = userSystem;
 </script>
 </body>
