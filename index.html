@@ -726,6 +726,15 @@ function removeHintArrow() {
 }
 
 // 显示完整解法
+// 解法动画状态
+let solutionAnimation = {
+  playing: false,
+  solution: null,
+  currentStep: 0,
+  interval: null,
+  speed: 800 // 毫秒
+};
+
 function showSolution() {
   const solution = solveLevel();
   
@@ -750,6 +759,7 @@ function showSolution() {
   // 步骤列表
   const stepsDiv = document.createElement('div');
   stepsDiv.className = 'solution-steps';
+  stepsDiv.id = 'solution-steps';
   
   const directionNames = {
     'up': '⬆️ 上',
@@ -761,6 +771,7 @@ function showSolution() {
   solution.forEach((step, index) => {
     const stepDiv = document.createElement('div');
     stepDiv.className = 'solution-step';
+    stepDiv.id = `solution-step-${index}`;
     stepDiv.textContent = `第 ${index + 1} 步: ${directionNames[step] || step}`;
     stepsDiv.appendChild(stepDiv);
   });
@@ -770,6 +781,16 @@ function showSolution() {
   // 按钮区域
   const buttonsDiv = document.createElement('div');
   buttonsDiv.className = 'solution-buttons';
+  
+  // 播放动画按钮
+  const playBtn = document.createElement('button');
+  playBtn.textContent = '▶️ 播放动画';
+  playBtn.id = 'play-solution-btn';
+  playBtn.onclick = () => {
+    playSolutionAnimation(solution);
+    modal.remove();
+  };
+  buttonsDiv.appendChild(playBtn);
   
   // 复制解法按钮
   const copyBtn = document.createElement('button');
@@ -812,6 +833,245 @@ function showSolution() {
       document.removeEventListener('keydown', escHandler);
     }
   });
+}
+
+// 播放解法动画
+function playSolutionAnimation(solution) {
+  if (!solution || solution.length === 0) return;
+  
+  // 停止之前的动画
+  stopSolutionAnimation();
+  
+  // 重置到初始状态
+  loadLevel(currentLevel);
+  
+  solutionAnimation.solution = solution;
+  solutionAnimation.currentStep = 0;
+  solutionAnimation.playing = true;
+  
+  const directionNames = {
+    'up': '⬆️ 上',
+    'down': '⬇️ 下',
+    'left': '⬅️ 左',
+    'right': '➡️ 右'
+  };
+  
+  // 显示播放控制栏
+  showPlaybackControls(solution.length);
+  
+  solutionAnimation.interval = setInterval(() => {
+    if (!solutionAnimation.playing) return;
+    
+    if (solutionAnimation.currentStep >= solution.length) {
+      stopSolutionAnimation();
+      toast('🎉 解法演示完成！');
+      return;
+    }
+    
+    const step = solution[solutionAnimation.currentStep];
+    let dx = 0, dy = 0;
+    
+    switch(step) {
+      case 'up': dy = -1; break;
+      case 'down': dy = 1; break;
+      case 'left': dx = -1; break;
+      case 'right': dx = 1; break;
+    }
+    
+    // 执行移动
+    const success = executeAnimatedMove(dx, dy);
+    
+    if (success) {
+      updatePlaybackProgress(solutionAnimation.currentStep + 1, solution.length);
+      toast(`第 ${solutionAnimation.currentStep + 1} 步: ${directionNames[step]}`, 800);
+      solutionAnimation.currentStep++;
+    } else {
+      // 如果移动失败，停止动画
+      stopSolutionAnimation();
+      toast('⚠️ 解法执行失败，停止播放');
+    }
+  }, solutionAnimation.speed);
+}
+
+// 执行动画移动（不保存历史）
+function executeAnimatedMove(dx, dy) {
+  const newX = playerPos.x + dx;
+  const newY = playerPos.y + dy;
+  
+  if (newY < 0 || newY >= gameMap.length || newX < 0 || newX >= gameMap[0].length) return false;
+  
+  const targetTile = gameMap[newY][newX];
+  if (targetTile === WALL) return false;
+  
+  if (targetTile === EMPTY || targetTile === TARGET) {
+    movePlayer(newX, newY);
+    moves++;
+    updateStats();
+    render();
+    return true;
+  }
+  
+  if (targetTile === BOX || targetTile === BOX_ON_TARGET) {
+    const boxNewX = newX + dx;
+    const boxNewY = newY + dy;
+    
+    if (boxNewY < 0 || boxNewY >= gameMap.length || boxNewX < 0 || boxNewX >= gameMap[0].length) return false;
+    
+    const boxTargetTile = gameMap[boxNewY][boxNewX];
+    if (boxTargetTile === WALL || boxTargetTile === BOX || boxTargetTile === BOX_ON_TARGET) return false;
+    
+    // 移动箱子
+    gameMap[boxNewY][boxNewX] = (boxTargetTile === TARGET) ? BOX_ON_TARGET : BOX;
+    gameMap[newY][newX] = (targetTile === BOX_ON_TARGET) ? TARGET : EMPTY;
+    
+    // 移动玩家
+    movePlayer(newX, newY);
+    
+    moves++;
+    pushes++;
+    updateStats();
+    render();
+    
+    return true;
+  }
+  
+  return false;
+}
+
+// 停止解法动画
+function stopSolutionAnimation() {
+  if (solutionAnimation.interval) {
+    clearInterval(solutionAnimation.interval);
+    solutionAnimation.interval = null;
+  }
+  
+  solutionAnimation.playing = false;
+  solutionAnimation.currentStep = 0;
+  
+  // 移除播放控制栏
+  const controls = document.getElementById('playback-controls');
+  if (controls) controls.remove();
+}
+
+// 显示播放控制栏
+function showPlaybackControls(totalSteps) {
+  // 移除旧的控制栏
+  const oldControls = document.getElementById('playback-controls');
+  if (oldControls) oldControls.remove();
+  
+  const controls = document.createElement('div');
+  controls.id = 'playback-controls';
+  controls.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26, 26, 46, 0.95);
+    border: 2px solid #3498db;
+    border-radius: 10px;
+    padding: 15px 25px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    z-index: 1500;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  `;
+  
+  // 进度显示
+  const progress = document.createElement('div');
+  progress.id = 'playback-progress';
+  progress.style.cssText = `
+    color: #e0e0e0;
+    font-size: 1.1rem;
+    min-width: 100px;
+    text-align: center;
+  `;
+  progress.textContent = `0 / ${totalSteps}`;
+  controls.appendChild(progress);
+  
+  // 暂停/继续按钮
+  const pauseBtn = document.createElement('button');
+  pauseBtn.id = 'pause-btn';
+  pauseBtn.textContent = '⏸️ 暂停';
+  pauseBtn.onclick = () => {
+    if (solutionAnimation.playing) {
+      solutionAnimation.playing = false;
+      pauseBtn.textContent = '▶️ 继续';
+    } else {
+      solutionAnimation.playing = true;
+      pauseBtn.textContent = '⏸️ 暂停';
+    }
+  };
+  controls.appendChild(pauseBtn);
+  
+  // 停止按钮
+  const stopBtn = document.createElement('button');
+  stopBtn.textContent = '⏹️ 停止';
+  stopBtn.onclick = () => {
+    stopSolutionAnimation();
+  };
+  controls.appendChild(stopBtn);
+  
+  // 速度控制
+  const speedLabel = document.createElement('label');
+  speedLabel.style.cssText = 'color: #e0e0e0; font-size: 0.9rem;';
+  speedLabel.textContent = '速度:';
+  controls.appendChild(speedLabel);
+  
+  const speedSelect = document.createElement('select');
+  speedSelect.style.cssText = 'padding: 5px 10px; border-radius: 5px;';
+  speedSelect.innerHTML = `
+    <option value="1200">慢</option>
+    <option value="800" selected>正常</option>
+    <option value="400">快</option>
+    <option value="200">超快</option>
+  `;
+  speedSelect.onchange = (e) => {
+    solutionAnimation.speed = parseInt(e.target.value);
+    // 如果正在播放，重启interval
+    if (solutionAnimation.interval) {
+      clearInterval(solutionAnimation.interval);
+      solutionAnimation.interval = setInterval(() => {
+        if (!solutionAnimation.playing) return;
+        
+        if (solutionAnimation.currentStep >= solutionAnimation.solution.length) {
+          stopSolutionAnimation();
+          toast('🎉 解法演示完成！');
+          return;
+        }
+        
+        const step = solutionAnimation.solution[solutionAnimation.currentStep];
+        let dx = 0, dy = 0;
+        
+        switch(step) {
+          case 'up': dy = -1; break;
+          case 'down': dy = 1; break;
+          case 'left': dx = -1; break;
+          case 'right': dx = 1; break;
+        }
+        
+        const success = executeAnimatedMove(dx, dy);
+        
+        if (success) {
+          updatePlaybackProgress(solutionAnimation.currentStep + 1, solutionAnimation.solution.length);
+          solutionAnimation.currentStep++;
+        } else {
+          stopSolutionAnimation();
+        }
+      }, solutionAnimation.speed);
+    }
+  };
+  controls.appendChild(speedSelect);
+  
+  document.body.appendChild(controls);
+}
+
+// 更新播放进度
+function updatePlaybackProgress(current, total) {
+  const progress = document.getElementById('playback-progress');
+  if (progress) {
+    progress.textContent = `${current} / ${total}`;
+  }
 }
 
 // 移动
