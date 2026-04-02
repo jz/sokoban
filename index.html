@@ -29,8 +29,244 @@ h1 {
 .subtitle {
   font-size: 1.2rem;
   color: #aaa;
-  margin-bottom: 50px;
+  margin-bottom: 30px;
   text-align: center;
+}
+
+/* 用户区域 */
+#user-section {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+#user-info {
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(52, 152, 219, 0.3);
+  border-radius: 10px;
+  padding: 15px 20px;
+  display: none;
+  align-items: center;
+  gap: 15px;
+  backdrop-filter: blur(10px);
+}
+
+#user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db, #2ecc71);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  font-weight: bold;
+}
+
+#user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#user-name {
+  font-weight: bold;
+  color: #3498db;
+  font-size: 1.1rem;
+}
+
+#user-stats {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+#logout-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 5px;
+  background: #e74c3c;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+#logout-btn:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+}
+
+#login-btn {
+  padding: 10px 25px;
+  border: 2px solid #3498db;
+  border-radius: 5px;
+  background: transparent;
+  color: #3498db;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+#login-btn:hover {
+  background: #3498db;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* 认证模态框 */
+.auth-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.auth-modal.show {
+  display: flex;
+}
+
+.auth-content {
+  background: #1a1a2e;
+  border: 2px solid #3498db;
+  border-radius: 15px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  animation: slideIn 0.3s;
+  position: relative;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.auth-content h2 {
+  color: #f39c12;
+  margin-bottom: 30px;
+  text-align: center;
+  font-size: 2rem;
+}
+
+.auth-tabs {
+  display: flex;
+  margin-bottom: 25px;
+  border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.3s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.auth-tab.active {
+  color: #3498db;
+  border-bottom-color: #3498db;
+  font-weight: bold;
+}
+
+.auth-form {
+  display: none;
+}
+
+.auth-form.active {
+  display: block;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #aaa;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid rgba(52, 152, 219, 0.3);
+  border-radius: 5px;
+  background: rgba(0,0,0,0.3);
+  color: #e0e0e0;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.form-group small {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: block;
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 5px;
+  background: #2ecc71;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 10px;
+}
+
+.auth-submit:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+}
+
+.auth-error {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin-top: 15px;
+  text-align: center;
+  display: none;
+}
+
+.auth-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: color 0.3s;
+  line-height: 1;
+}
+
+.auth-close:hover {
+  color: #e74c3c;
 }
 
 .games-container {
@@ -39,6 +275,7 @@ h1 {
   gap: 30px;
   max-width: 1200px;
   width: 100%;
+  margin-top: 20px;
 }
 
 .game-card {
@@ -113,6 +350,7 @@ footer {
   text-align: center;
   color: #666;
   font-size: 0.9rem;
+  padding: 20px;
 }
 
 footer a {
@@ -128,18 +366,44 @@ footer a:hover {
   h1 {
     font-size: 2rem;
   }
-  
+
   .games-container {
     grid-template-columns: 1fr;
   }
-  
+
   .game-card {
     padding: 20px;
+  }
+
+  #user-section {
+    top: 10px;
+    right: 10px;
+  }
+
+  #user-info {
+    padding: 10px 15px;
+  }
+
+  #user-stats {
+    display: none;
   }
 }
 </style>
 </head>
 <body>
+<!-- 用户区域 -->
+<div id="user-section">
+  <button id="login-btn">👤 登录 / 注册</button>
+  <div id="user-info">
+    <div id="user-avatar"></div>
+    <div id="user-details">
+      <div id="user-name">Player</div>
+      <div id="user-stats">总分: 0</div>
+    </div>
+    <button id="logout-btn">退出</button>
+  </div>
+</div>
+
 <h1>🎮 游戏乐园</h1>
 <p class="subtitle">Classic HTML5 Games - 经典网页游戏合集</p>
 
@@ -196,5 +460,357 @@ footer a:hover {
 <footer>
   <p>Made with ❤️ by <a href="https://github.com/jz">Jeff Zhong</a> | Powered by OpenClaw</p>
 </footer>
+
+<!-- 认证模态框 -->
+<div class="auth-modal" id="auth-modal">
+  <div class="auth-content">
+    <button class="auth-close" id="auth-close">&times;</button>
+    <h2>🎮 用户中心</h2>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">登录</button>
+      <button class="auth-tab" data-tab="register">注册</button>
+    </div>
+
+    <!-- 登录表单 -->
+    <form class="auth-form active" id="login-form">
+      <div class="form-group">
+        <label for="login-username">用户名</label>
+        <input type="text" id="login-username" placeholder="请输入用户名" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">密码</label>
+        <input type="password" id="login-password" placeholder="请输入密码" required>
+      </div>
+      <button type="submit" class="auth-submit">登录</button>
+      <div class="auth-error" id="login-error"></div>
+    </form>
+
+    <!-- 注册表单 -->
+    <form class="auth-form" id="register-form">
+      <div class="form-group">
+        <label for="register-username">用户名</label>
+        <input type="text" id="register-username" placeholder="3-20个字符" required minlength="3" maxlength="20">
+        <small>用户名用于显示和登录</small>
+      </div>
+      <div class="form-group">
+        <label for="register-password">密码</label>
+        <input type="password" id="register-password" placeholder="至少6个字符" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label for="register-confirm">确认密码</label>
+        <input type="password" id="register-confirm" placeholder="再次输入密码" required>
+      </div>
+      <button type="submit" class="auth-submit">注册</button>
+      <div class="auth-error" id="register-error"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+// 用户系统
+class UserSystem {
+  constructor() {
+    this.currentUser = null;
+    this.init();
+  }
+
+  init() {
+    // 检查是否有已登录用户
+    const savedUser = localStorage.getItem('gameUser');
+    if (savedUser) {
+      this.currentUser = JSON.parse(savedUser);
+      this.showUserInfo();
+    }
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    // 登录按钮
+    document.getElementById('login-btn').addEventListener('click', () => {
+      this.showAuthModal();
+    });
+
+    // 退出按钮
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      this.logout();
+    });
+
+    // 关闭模态框
+    document.getElementById('auth-close').addEventListener('click', () => {
+      this.hideAuthModal();
+    });
+
+    // 点击背景关闭
+    document.getElementById('auth-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'auth-modal') {
+        this.hideAuthModal();
+      }
+    });
+
+    // 标签切换
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+        this.switchTab(targetTab);
+      });
+    });
+
+    // 登录表单
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.login();
+    });
+
+    // 注册表单
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.register();
+    });
+  }
+
+  showAuthModal() {
+    document.getElementById('auth-modal').classList.add('show');
+    document.getElementById('login-username').focus();
+  }
+
+  hideAuthModal() {
+    document.getElementById('auth-modal').classList.remove('show');
+    this.clearForms();
+  }
+
+  switchTab(tabName) {
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    document.querySelectorAll('.auth-form').forEach(form => {
+      form.classList.toggle('active', form.id === `${tabName}-form`);
+    });
+  }
+
+  login() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (!username || !password) {
+      this.showError('login-error', '请填写所有字段');
+      return;
+    }
+
+    // 获取用户列表
+    const users = this.getUsers();
+    const user = users.find(u => u.username === username);
+
+    if (!user) {
+      this.showError('login-error', '用户不存在');
+      return;
+    }
+
+    // 简单密码验证（实际应该加密，但这是本地演示）
+    if (user.password !== this.simpleHash(password)) {
+      this.showError('login-error', '密码错误');
+      return;
+    }
+
+    // 登录成功
+    this.currentUser = user;
+    localStorage.setItem('gameUser', JSON.stringify(user));
+    this.hideAuthModal();
+    this.showUserInfo();
+    this.showNotification('登录成功！欢迎回来，' + username);
+  }
+
+  register() {
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value;
+    const confirm = document.getElementById('register-confirm').value;
+
+    if (!username || !password || !confirm) {
+      this.showError('register-error', '请填写所有字段');
+      return;
+    }
+
+    if (username.length < 3 || username.length > 20) {
+      this.showError('register-error', '用户名需要3-20个字符');
+      return;
+    }
+
+    if (password.length < 6) {
+      this.showError('register-error', '密码至少需要6个字符');
+      return;
+    }
+
+    if (password !== confirm) {
+      this.showError('register-error', '两次密码输入不一致');
+      return;
+    }
+
+    // 检查用户名是否已存在
+    const users = this.getUsers();
+    if (users.find(u => u.username === username)) {
+      this.showError('register-error', '用户名已存在');
+      return;
+    }
+
+    // 创建新用户
+    const newUser = {
+      id: Date.now(),
+      username: username,
+      password: this.simpleHash(password),
+      createdAt: new Date().toISOString(),
+      scores: {
+        snake: 0,
+        sokoban: {}
+      }
+    };
+
+    users.push(newUser);
+    this.saveUsers(users);
+
+    // 自动登录
+    this.currentUser = newUser;
+    localStorage.setItem('gameUser', JSON.stringify(newUser));
+    this.hideAuthModal();
+    this.showUserInfo();
+    this.showNotification('注册成功！欢迎，' + username);
+  }
+
+  logout() {
+    this.currentUser = null;
+    localStorage.removeItem('gameUser');
+    this.hideUserInfo();
+    this.showNotification('已退出登录');
+  }
+
+  showUserInfo() {
+    document.getElementById('login-btn').style.display = 'none';
+    const userInfo = document.getElementById('user-info');
+    userInfo.style.display = 'flex';
+    document.getElementById('user-avatar').textContent = this.currentUser.username[0].toUpperCase();
+    document.getElementById('user-name').textContent = this.currentUser.username;
+    document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
+  }
+
+  hideUserInfo() {
+    document.getElementById('login-btn').style.display = 'block';
+    document.getElementById('user-info').style.display = 'none';
+  }
+
+  showError(elementId, message) {
+    const errorEl = document.getElementById(elementId);
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+    setTimeout(() => {
+      errorEl.style.display = 'none';
+    }, 3000);
+  }
+
+  clearForms() {
+    document.getElementById('login-form').reset();
+    document.getElementById('register-form').reset();
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('register-error').style.display = 'none';
+  }
+
+  getUsers() {
+    const users = localStorage.getItem('gameUsers');
+    return users ? JSON.parse(users) : [];
+  }
+
+  saveUsers(users) {
+    localStorage.setItem('gameUsers', JSON.stringify(users));
+  }
+
+  simpleHash(str) {
+    // 简单哈希（仅用于演示，实际应用应使用更安全的方法）
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
+  }
+
+  getTotalScore() {
+    if (!this.currentUser) return 0;
+    const snakeScore = this.currentUser.scores.snake || 0;
+    return snakeScore;
+  }
+
+  updateScore(game, score) {
+    if (!this.currentUser) return;
+
+    if (game === 'snake') {
+      if (score > this.currentUser.scores.snake) {
+        this.currentUser.scores.snake = score;
+        this.saveUser();
+        document.getElementById('user-stats').textContent = `总分: ${this.getTotalScore()}`;
+      }
+    }
+  }
+
+  saveUser() {
+    const users = this.getUsers();
+    const index = users.findIndex(u => u.id === this.currentUser.id);
+    if (index !== -1) {
+      users[index] = this.currentUser;
+      this.saveUsers(users);
+      localStorage.setItem('gameUser', JSON.stringify(this.currentUser));
+    }
+  }
+
+  showNotification(message) {
+    // 创建通知
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: rgba(46, 204, 113, 0.95);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-size: 1rem;
+      z-index: 3000;
+      animation: slideInRight 0.3s;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    // 添加动画
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(100px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // 3秒后移除
+    setTimeout(() => {
+      notification.style.animation = 'slideInRight 0.3s reverse';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
+  isLoggedIn() {
+    return this.currentUser !== null;
+  }
+
+  getCurrentUser() {
+    return this.currentUser;
+  }
+}
+
+// 初始化用户系统
+const userSystem = new UserSystem();
+
+// 导出给其他页面使用
+window.userSystem = userSystem;
+</script>
 </body>
 </html>
